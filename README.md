@@ -571,18 +571,33 @@ END;
 1. Report Outline
 1.1 Title Page
 Title: Database Programming for Urban Farming Management
+
 Prepared by: [Your Name]
+
 Date: [Submission Date]
+
 1.2 Table of Contents
+
 Problem Statement
+
 Objectives and Scope
+
 Database Design
+
 Advanced Programming Features
+
 Triggers
+
 Cursors
+
 Functions
+
 Packages
+
 Auditing
+
 Testing and Validation
+
 Scope and Limitations
+
 Conclusion
