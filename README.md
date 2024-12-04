@@ -563,6 +563,10 @@ BEGIN
             :OLD.OrderID || ' - ' || :OLD.QuantityOrdered
         );
     END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Log the error
+        DBMS_OUTPUT.PUT_LINE('Trigger failed: ' || SQLERRM);
 END;
 /
 
