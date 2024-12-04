@@ -652,6 +652,11 @@ BEGIN
     WHERE GRANTED_ROLE = p_Role;
 
     RETURN v_Count > 0; -- Returns TRUE if the user has the specified role
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+        RETURN FALSE;
+
 END;
 /
 ```
