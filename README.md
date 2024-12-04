@@ -172,9 +172,15 @@ COMPOUND TRIGGER
     -- Row-level AFTER EACH ROW logic
     AFTER EACH ROW IS
     BEGIN
-        -- Record the changes
-        OrderChangesList.EXTEND;
-        OrderChangesList(OrderChangesList.LAST) := TO_CHAR(:NEW.InventoryID) || ',' || TO_CHAR(:NEW.QuantityOrdered);
+        BEGIN
+            -- Record the changes
+            OrderChangesList.EXTEND;
+            OrderChangesList(OrderChangesList.LAST) := TO_CHAR(:NEW.InventoryID) || ',' || TO_CHAR(:NEW.QuantityOrdered);
+        EXCEPTION
+            WHEN OTHERS THEN
+                -- Handle unexpected errors during row processing
+                RAISE_APPLICATION_ERROR(-20010, 'Error occurred during row-level processing.');
+        END;
     END AFTER EACH ROW;
 
     -- Statement-level AFTER STATEMENT logic
@@ -185,32 +191,47 @@ COMPOUND TRIGGER
     BEGIN
         -- Process the changes
         FOR i IN 1..OrderChangesList.COUNT LOOP
-            -- Parse InventoryID and QuantityOrdered
-            v_InventoryID := TO_NUMBER(SUBSTR(OrderChangesList(i), 1, INSTR(OrderChangesList(i), ',') - 1));
-            v_QuantityOrdered := TO_NUMBER(SUBSTR(OrderChangesList(i), INSTR(OrderChangesList(i), ',') + 1));
+            BEGIN
+                -- Parse InventoryID and QuantityOrdered
+                v_InventoryID := TO_NUMBER(SUBSTR(OrderChangesList(i), 1, INSTR(OrderChangesList(i), ',') - 1));
+                v_QuantityOrdered := TO_NUMBER(SUBSTR(OrderChangesList(i), INSTR(OrderChangesList(i), ',') + 1));
 
-            -- Fetch current inventory quantity
-            SELECT Quantity
-            INTO v_CurrentQuantity
-            FROM Inventory
-            WHERE InventoryID = v_InventoryID;
+                -- Fetch current inventory quantity
+                SELECT Quantity
+                INTO v_CurrentQuantity
+                FROM Inventory
+                WHERE InventoryID = v_InventoryID;
 
-            -- Check if the inventory will go negative
-            IF v_CurrentQuantity - v_QuantityOrdered < 0 THEN
-                RAISE_APPLICATION_ERROR(-20002, 'Insufficient inventory for InventoryID: ' || v_InventoryID);
-            END IF;
+                -- Check if the inventory will go negative
+                IF v_CurrentQuantity - v_QuantityOrdered < 0 THEN
+                    RAISE_APPLICATION_ERROR(-20002, 'Insufficient inventory for InventoryID: ' || v_InventoryID);
+                END IF;
 
-            -- Update inventory
-            UPDATE Inventory
-            SET Quantity = Quantity - v_QuantityOrdered
-            WHERE InventoryID = v_InventoryID;
+                -- Update inventory
+                UPDATE Inventory
+                SET Quantity = Quantity - v_QuantityOrdered
+                WHERE InventoryID = v_InventoryID;
+
+            EXCEPTION
+                WHEN NO_DATA_FOUND THEN
+                    -- Handle missing InventoryID
+                    RAISE_APPLICATION_ERROR(-20003, 'InventoryID ' || v_InventoryID || ' not found in Inventory.');
+                WHEN OTHERS THEN
+                    -- Handle unexpected errors during inventory update
+                    RAISE_APPLICATION_ERROR(-20004, 'Error occurred while updating inventory for InventoryID: ' || v_InventoryID);
+            END;
         END LOOP;
 
         -- Clear the list
         OrderChangesList.DELETE;
+    EXCEPTION
+        WHEN OTHERS THEN
+            -- Handle unexpected errors at the statement level
+            RAISE_APPLICATION_ERROR(-20005, 'Unexpected error occurred during statement-level processing.');
     END AFTER STATEMENT;
 END ManageInventoryOnOrder;
 /
+
 
 ```
 ### Setup
