@@ -303,17 +303,18 @@ CREATE OR REPLACE FUNCTION GetTotalOrdersByClient(
 ) RETURN NUMBER IS
     v_TotalOrders NUMBER;
 BEGIN
+    -- Count the total number of orders for the given client
     SELECT COUNT(*)
     INTO v_TotalOrders
     FROM Orders
     WHERE ClientID = p_ClientID;
 
     RETURN v_TotalOrders;
+
 EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-        RETURN 0; -- If no orders are found, return 0
     WHEN OTHERS THEN
-        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
+        -- Log and return NULL in case of an unexpected error
+        DBMS_OUTPUT.PUT_LINE('Error in GetTotalOrdersByClient: ' || SQLERRM);
         RETURN NULL;
 END;
 /
