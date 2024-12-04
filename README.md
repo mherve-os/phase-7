@@ -381,10 +381,13 @@ CREATE OR REPLACE PACKAGE FarmManagement AS
         p_StorageLocation VARCHAR2
     );
 END FarmManagement;
+/
+
 ---------------------------------------------------------------------------------
 ---body of the package
 
 CREATE OR REPLACE PACKAGE BODY FarmManagement AS
+
     -- Procedure to add a new farm
     PROCEDURE AddFarm(
         p_FarmID INT, 
@@ -396,7 +399,11 @@ CREATE OR REPLACE PACKAGE BODY FarmManagement AS
     BEGIN
         INSERT INTO Farms (FarmID, Name, Address, TotalPlantingArea, AssignedStaff)
         VALUES (p_FarmID, p_Name, p_Address, p_TotalPlantingArea, p_AssignedStaff);
-        COMMIT;
+    EXCEPTION
+        WHEN DUP_VAL_ON_INDEX THEN
+            DBMS_OUTPUT.PUT_LINE('Error: FarmID already exists.');
+        WHEN OTHERS THEN
+            DBMS_OUTPUT.PUT_LINE('Error in AddFarm: ' || SQLERRM);
     END AddFarm;
 
     -- Procedure to assign staff to a farm
@@ -404,11 +411,25 @@ CREATE OR REPLACE PACKAGE BODY FarmManagement AS
         p_PersonID INT, 
         p_AssignedFarm INT
     ) IS
+        v_FarmExists NUMBER := 0;
     BEGIN
+        -- Validate FarmID
+        SELECT COUNT(*)
+        INTO v_FarmExists
+        FROM Farms
+        WHERE FarmID = p_AssignedFarm;
+
+        IF v_FarmExists = 0 THEN
+            RAISE_APPLICATION_ERROR(-20001, 'Assigned farm does not exist.');
+        END IF;
+
         UPDATE StaffAndVolunteers
         SET AssignedFarm = p_AssignedFarm
         WHERE PersonID = p_PersonID;
-        COMMIT;
+
+    EXCEPTION
+        WHEN OTHERS THEN
+            DBMS_OUTPUT.PUT_LINE('Error in AssignStaffToFarm: ' || SQLERRM);
     END AssignStaffToFarm;
 
     -- Function to calculate the total crop yield for a given farm
@@ -421,6 +442,11 @@ CREATE OR REPLACE PACKAGE BODY FarmManagement AS
         WHERE FarmID = p_FarmID;
 
         RETURN v_TotalYield;
+
+    EXCEPTION
+        WHEN OTHERS THEN
+            DBMS_OUTPUT.PUT_LINE('Error in GetTotalCropYield: ' || SQLERRM);
+            RETURN NULL;
     END GetTotalCropYield;
 
     -- Procedure to update inventory for a specific crop
@@ -430,11 +456,26 @@ CREATE OR REPLACE PACKAGE BODY FarmManagement AS
         p_FreshnessStatus VARCHAR2, 
         p_StorageLocation VARCHAR2
     ) IS
+        v_CropExists NUMBER := 0;
     BEGIN
+        -- Validate CropID
+        SELECT COUNT(*)
+        INTO v_CropExists
+        FROM Crops
+        WHERE CropID = p_CropID;
+
+        IF v_CropExists = 0 THEN
+            RAISE_APPLICATION_ERROR(-20002, 'CropID does not exist.');
+        END IF;
+
         INSERT INTO Inventory (InventoryID, CropID, Quantity, FreshnessStatus, StorageLocation)
         VALUES (Inventory_SEQ.NEXTVAL, p_CropID, p_Quantity, p_FreshnessStatus, p_StorageLocation);
-        COMMIT;
+
+    EXCEPTION
+        WHEN OTHERS THEN
+            DBMS_OUTPUT.PUT_LINE('Error in UpdateInventory: ' || SQLERRM);
     END UpdateInventory;
+
 END FarmManagement;
 /
 
