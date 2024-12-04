@@ -130,20 +130,26 @@ WHERE HarvestID = 2;
 CREATE OR REPLACE TRIGGER EnsureCropExists
 BEFORE INSERT OR UPDATE ON Harvests
 FOR EACH ROW
+DECLARE
+    v_CropExists NUMBER;
 BEGIN
     -- Check if the CropID exists in the Crops table
-    DECLARE
-        v_CropExists NUMBER;
-    BEGIN
-        SELECT COUNT(*)
-        INTO v_CropExists
-        FROM Crops
-        WHERE CropID = :NEW.CropID;
+    SELECT COUNT(*)
+    INTO v_CropExists
+    FROM Crops
+    WHERE CropID = :NEW.CropID;
 
-        IF v_CropExists = 0 THEN
-            RAISE_APPLICATION_ERROR(-20001, 'CropID does not exist in the Crops table.');
-        END IF;
-    END;
+    IF v_CropExists = 0 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'CropID does not exist in the Crops table.');
+    END IF;
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        -- This should not occur with COUNT(*), but included for completeness
+        RAISE_APPLICATION_ERROR(-20002, 'Unexpected error: Crops table could not be accessed.');
+    WHEN OTHERS THEN
+        -- Generic handler for unexpected errors
+        RAISE_APPLICATION_ERROR(-20003, 'An unexpected error occurred while validating CropID.');
 END EnsureCropExists;
 /
 
