@@ -65,19 +65,36 @@ COMPOUND TRIGGER
         -- Track the additional yield
         HarvestChangesList.EXTEND;
         HarvestChangesList(HarvestChangesList.COUNT) := HarvestChange(:NEW.CropID, :NEW.Yield);
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20004, 'Error occurred during BEFORE EACH ROW in UpdateInventoryAfterHarvest!');
     END BEFORE EACH ROW;
 
     AFTER STATEMENT IS
     BEGIN
         -- Update inventory for each change
         FOR i IN HarvestChangesList.FIRST..HarvestChangesList.LAST LOOP
-            UPDATE Inventory
-            SET Quantity = Quantity + HarvestChangesList(i).AdditionalYield
-            WHERE CropID = HarvestChangesList(i).CropID;
+            BEGIN
+                UPDATE Inventory
+                SET Quantity = Quantity + HarvestChangesList(i).AdditionalYield
+                WHERE CropID = HarvestChangesList(i).CropID;
+
+                -- Raise an error if the CropID is missing
+                IF SQL%NOTFOUND THEN
+                    RAISE_APPLICATION_ERROR(-20005, 'CropID ' || HarvestChangesList(i).CropID || ' does not exist in Inventory!');
+                END IF;
+            EXCEPTION
+                WHEN OTHERS THEN
+                    -- Handle unexpected errors during update
+                    RAISE_APPLICATION_ERROR(-20006, 'Error occurred while updating Inventory for CropID ' || HarvestChangesList(i).CropID);
+            END;
         END LOOP;
 
         -- Clear the list
         HarvestChangesList.DELETE;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20007, 'Error occurred during AFTER STATEMENT in UpdateInventoryAfterHarvest!');
     END AFTER STATEMENT;
 
 END UpdateInventoryAfterHarvest;
