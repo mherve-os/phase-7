@@ -261,29 +261,47 @@ Generate a report of all Inventory items with a Quantity below a specified thres
 CREATE OR REPLACE PROCEDURE GenerateLowInventoryReport(
     p_Threshold NUMBER
 ) IS
+    -- Cursor to retrieve low inventory items
     CURSOR LowInventoryCursor IS
         SELECT InventoryID, CropID, Quantity
         FROM Inventory
         WHERE Quantity < p_Threshold;
 
+    -- Variables to hold cursor data
     v_InventoryID Inventory.InventoryID%TYPE;
     v_CropID Inventory.CropID%TYPE;
     v_Quantity Inventory.Quantity%TYPE;
+
 BEGIN
     DBMS_OUTPUT.PUT_LINE('Low Inventory Report:');
     DBMS_OUTPUT.PUT_LINE('--------------------------------');
 
+    -- Open the cursor and fetch records
     OPEN LowInventoryCursor;
     LOOP
         FETCH LowInventoryCursor INTO v_InventoryID, v_CropID, v_Quantity;
         EXIT WHEN LowInventoryCursor%NOTFOUND;
 
-        DBMS_OUTPUT.PUT_LINE('InventoryID: ' || v_InventoryID || ', CropID: ' || v_CropID || ', Quantity: ' || v_Quantity);
+        -- Output inventory details
+        DBMS_OUTPUT.PUT_LINE(
+            'InventoryID: ' || v_InventoryID || 
+            ', CropID: ' || v_CropID || 
+            ', Quantity: ' || v_Quantity
+        );
     END LOOP;
 
     CLOSE LowInventoryCursor;
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        -- Handle case where the cursor fetches no rows
+        DBMS_OUTPUT.PUT_LINE('No inventory items found below the specified threshold.');
+    WHEN OTHERS THEN
+        -- Handle unexpected errors
+        DBMS_OUTPUT.PUT_LINE('Error occurred in GenerateLowInventoryReport: ' || SQLERRM);
 END;
-/
+/  
+
 
 ```
 ### check Quantity under 100
