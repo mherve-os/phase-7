@@ -34,6 +34,13 @@ BEGIN
     IF :NEW.QuantityOrdered > v_AvailableQuantity THEN
         RAISE_APPLICATION_ERROR(-20001, 'Quantity ordered exceeds available inventory!');
     END IF;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        -- Handle cases where InventoryID does not exist in the Inventory table
+        RAISE_APPLICATION_ERROR(-20002, 'InventoryID does not exist!');
+    WHEN OTHERS THEN
+        -- Catch all other exceptions and re-raise them with a generic message
+        RAISE_APPLICATION_ERROR(-20003, 'An unexpected error occurred while validating inventory!');
 END;
 /
 
